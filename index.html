@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hitlijsten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080b;
+    --panel: #0f1117;
+    --line: rgba(255,255,255,.08);
+    --text: #ffffff;
+    --muted: rgba(255,255,255,.72);
+    --dim: rgba(255,255,255,.48);
+    --songs: #FF6823;      /* oranje accent */
+    --songs-2: #ffb07a;
+    --films: #7c8cff;      /* blauw/paars accent */
+    --films-2: #c3c9ff;
+
+    /* Liggend: twee lijsten naast elkaar */
+    --pad: 3vmin;
+    --gap: 2.4vmin;
+    --head-h: 8vmin;
+    --h1: 4.4vmin;
+    --clock: 4.4vmin;
+    --radius: 2vmin;
+    --kicker: 1.6vmin;
+    --panel-title: 3.4vmin;
+    --hero-title: 4.2vmin;
+    --hero-sub: 2.3vmin;
+    --hero-num: 12vmin;
+    --row-title: 2.5vmin;
+    --row-sub: 1.85vmin;
+    --row-num: 4.6vmin;
+  }
+  @media (orientation: portrait) {
+    :root {
+      /* Staand: songs boven, films onder */
+      --pad: 4.2vw;
+      --gap: 3.2vw;
+      --head-h: 12vw;
+      --h1: 6.6vw;
+      --clock: 6.6vw;
+      --radius: 3vw;
+      --kicker: 2.5vw;
+      --panel-title: 4.6vw;
+      --hero-title: 5.4vw;
+      --hero-sub: 3.2vw;
+      --hero-num: 15vw;
+      --row-title: 3.4vw;
+      --row-sub: 2.6vw;
+      --row-num: 6vw;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'DM Sans', sans-serif; cursor: none; -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(ellipse 50% 45% at 0% 0%, rgba(255,104,35,.14), transparent 65%),
+      radial-gradient(ellipse 50% 50% at 100% 100%, rgba(124,140,255,.14), transparent 65%),
+      var(--bg);
+  }
+  .page {
+    position: fixed; inset: 0; padding: var(--pad);
+    display: grid; grid-template-rows: var(--head-h) 1fr; gap: var(--gap);
+  }
+
+  /* ---------- Kop ---------- */
+  header { position: relative; display: flex; align-items: center; justify-content: space-between; }
+  header::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: calc(var(--gap) * -.5); height: 2px;
+    background: linear-gradient(90deg, var(--songs) 0%, rgba(255,104,35,.25) 30%, rgba(124,140,255,.25) 70%, var(--films) 100%);
+  }
+  .title-block { display: flex; flex-direction: column; gap: .35em; }
+  h1 { font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--h1); letter-spacing: -.03em; line-height: 1; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, var(--songs), var(--films)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-family: 'DM Mono', monospace; font-size: var(--kicker); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .when { display: flex; align-items: center; gap: calc(var(--clock) * .45); }
+  .date { font-family: 'DM Mono', monospace; font-size: calc(var(--clock) * .3); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .clock { font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--clock); letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  @media (orientation: portrait) { .date { display: none; } .subtitle { letter-spacing: .08em; } }
+
+  /* ---------- Twee lijsten ---------- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); min-height: 0; }
+  @media (orientation: portrait) { .grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+
+  .panel {
+    --accent: var(--songs); --accent-2: var(--songs-2);
+    position: relative; min-height: 0; min-width: 0; overflow: hidden;
+    border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line);
+    display: grid; grid-template-rows: auto 1fr auto;
+  }
+  .panel.films { --accent: var(--films); --accent-2: var(--films-2); }
+
+  /* #1-hoes als sfeerachtergrond van het hele vak (geen blur: licht voor een Pi) */
+  .panel .backdrop {
+    position: absolute; inset: 0; background-size: cover; background-position: center;
+    opacity: .16; transform: scale(1.15);
+  }
+  .panel::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background:
+      linear-gradient(180deg, rgba(15,17,23,.55) 0%, rgba(15,17,23,.92) 45%, var(--panel) 100%),
+      radial-gradient(ellipse 80% 60% at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  }
+  .panel > * { position: relative; z-index: 1; }
+
+  .panel-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 1em;
+    padding: calc(var(--pad) * .85) calc(var(--pad) * .9) calc(var(--pad) * .5);
+  }
+  .panel-head h2 {
+    display: flex; align-items: center; gap: .5em;
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--panel-title); letter-spacing: -.02em;
+  }
+  .panel-head h2 i { width: .5em; height: .5em; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 .18em color-mix(in srgb, var(--accent) 25%, transparent); }
+  .panel-head span { font-family: 'DM Mono', monospace; font-size: var(--kicker); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+
+  .list { min-height: 0; display: grid; grid-template-rows: minmax(0, 2fr) repeat(4, minmax(0, 1fr)); padding: 0 calc(var(--pad) * .9); }
+
+  /* ---------- Nummer 1 ---------- */
+  .hero {
+    min-height: 0; overflow: hidden; display: grid; grid-template-columns: auto 1fr; gap: calc(var(--pad) * .8); align-items: center;
+    padding-bottom: calc(var(--pad) * .55); border-bottom: 1px solid var(--line);
+  }
+  .hero .art {
+    position: relative; height: 100%; max-height: 100%; aspect-ratio: 1 / 1;
+    border-radius: calc(var(--radius) * .7); background: #1a1d24 center / cover no-repeat;
+    box-shadow: 0 1.2vmin 3vmin rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+    overflow: hidden;
+  }
+  /* groot cijfer 1 linksonder op de hoes */
+  .hero .art::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(35deg, rgba(0,0,0,.7) 0%, rgba(0,0,0,0) 45%);
+  }
+  .films .hero .art { aspect-ratio: 2 / 3; }
+  .hero .info { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .hero .num {
+    position: absolute; z-index: 1; left: .14em; bottom: .02em;
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--hero-num); line-height: .85; letter-spacing: -.06em;
+    color: #fff; text-shadow: 0 .04em .12em rgba(0,0,0,.4);
+  }
+  .hero .num small { font-size: .42em; vertical-align: top; line-height: 1.5; color: var(--accent-2); margin-right: .04em; }
+  .badge {
+    align-self: flex-start; font-family: 'DM Mono', monospace; font-size: var(--kicker); letter-spacing: .12em; text-transform: uppercase;
+    background: var(--accent); color: #fff; padding: .4em .85em; border-radius: 999px; margin-bottom: .9em; font-weight: 500;
+  }
+  .hero .t {
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--hero-title); line-height: 1.08; letter-spacing: -.02em;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: .3em;
+  }
+  .hero .s { font-size: var(--hero-sub); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- Plek 2 t/m 5 ---------- */
+  .row {
+    min-height: 0; overflow: hidden; display: grid; grid-template-columns: calc(var(--row-num) * 1.25) auto 1fr; gap: calc(var(--pad) * .55); align-items: center;
+    border-bottom: 1px solid var(--line); padding: calc(var(--pad) * .22) 0;
+  }
+  .row:last-child { border-bottom: 0; }
+  .pos { display: flex; flex-direction: column; align-items: center; gap: .35em; }
+  .mv {
+    display: inline-flex; align-items: center; justify-content: center; gap: .25em;
+    font-family: 'DM Mono', monospace; font-weight: 500; font-size: calc(var(--row-sub) * .82); letter-spacing: .04em; line-height: 1;
+    padding: .3em .55em; border-radius: 999px; white-space: nowrap;
+  }
+  .mv.up   { color: #3ddc97; background: rgba(61,220,151,.14); }
+  .mv.down { color: #ff6b7a; background: rgba(255,107,122,.14); }
+  .mv.same { color: var(--dim); background: rgba(255,255,255,.07); font-size: calc(var(--row-sub) * .6); padding: .45em .7em; }
+  .mv.new  { color: #fff; background: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-size: calc(var(--row-sub) * .7); }
+  .mv-hero { position: absolute; z-index: 2; top: .6em; right: .6em; font-size: var(--hero-sub); }
+  .mv-hero .mv { font-size: calc(var(--row-sub) * .95); background-color: rgba(9,10,14,.72); }
+  .mv-hero .mv.new { background: var(--accent); }
+  .mv-inline { display: none; }
+  @media (orientation: portrait) {
+    .pos .mv, .mv-hero { display: none; }
+    .mv-inline { display: inline; margin-right: .5em; }
+    .mv-inline .mv { vertical-align: .1em; }
+  }
+  .row .num {
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: var(--row-num); line-height: 1; letter-spacing: -.04em;
+    color: transparent; -webkit-text-stroke: max(1px, .12vmin) var(--accent-2); text-align: center;
+  }
+  .row .art {
+    height: 100%; aspect-ratio: 1 / 1; border-radius: calc(var(--radius) * .4);
+    background: #1a1d24 center / cover no-repeat; box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .films .row .art { aspect-ratio: 2 / 3; }
+  .row .info { min-width: 0; }
+  .row .t { font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--row-title); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .2em; }
+  .row .s { font-size: var(--row-sub); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .money {
+    margin-top: .55em; display: flex; align-items: baseline; gap: .45em; flex-wrap: wrap;
+    font-family: 'Sora', sans-serif; font-weight: 800; font-size: calc(var(--hero-title) * .78); letter-spacing: -.02em; color: var(--accent-2);
+  }
+  .money small { font-family: 'DM Mono', monospace; font-weight: 400; font-size: calc(var(--kicker) * 1); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .row .m { color: var(--accent-2); font-weight: 600; }
+  @media (orientation: portrait) {
+    .hero.has-money .t { -webkit-line-clamp: 1; display: block; white-space: nowrap; text-overflow: ellipsis; margin-bottom: .15em; }
+    .hero.has-money .badge { display: none; }
+    .hero.has-money .s { font-size: calc(var(--hero-sub) * .9); }
+    .hero.has-money .money { margin-top: .15em; font-size: calc(var(--hero-sub) * 1.35); }
+    .hero.has-money .money small { font-size: calc(var(--kicker) * .85); }
+  }
+  .panel-foot {
+    padding: calc(var(--pad) * .45) calc(var(--pad) * .9) calc(var(--pad) * .6);
+    font-family: 'DM Mono', monospace; font-size: calc(var(--kicker) * .9); letter-spacing: .1em; text-transform: uppercase; color: var(--dim);
+  }
+
+  .empty { display: flex; align-items: center; justify-content: center; color: var(--dim); font-family: 'DM Mono', monospace; font-size: var(--kicker); letter-spacing: .1em; text-transform: uppercase; grid-row: 1 / -1; }
+
+  /* bij verversen zacht wisselen */
+  .swap { animation: swap 900ms ease both; }
+  @keyframes swap { from { opacity: .25; } to { opacity: 1; } }
+
+  #status {
+    position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin;
+    background: var(--bg); transition: opacity 700ms ease;
+    font-family: 'DM Mono', monospace; font-size: 2vmin; color: var(--dim); letter-spacing: .08em; text-transform: uppercase;
+  }
+  #status.hide { opacity: 0; pointer-events: none; }
+  .spinner { width: 6vmin; height: 6vmin; border-radius: 50%; border: .6vmin solid rgba(255,255,255,.1); border-top-color: var(--songs); animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #dbg {
+    position: fixed; z-index: 50; right: 1vw; bottom: 1vw; width: min(760px, 70vw); max-height: 40vh; overflow: auto;
+    background: rgba(0,0,0,.88); color: #9f9; font: 13px/1.45 'DM Mono', monospace; padding: 10px 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-all;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <div class="title-block">
+      <h1>Nu <em>populair</em></h1>
+      <div class="subtitle" id="updated">Hitlijsten Nederland</div>
+    </div>
+    <div class="when"><div class="date" id="date"></div><div class="clock" id="clock">--:--</div></div>
+  </header>
+
+  <main class="grid">
+    <section class="panel songs" id="songs">
+      <div class="backdrop"></div>
+      <div class="panel-head"><h2><i></i>Top 5 songs</h2><span>Spotify · NL</span></div>
+      <div class="list"><div class="empty">Laden</div></div>
+      <div class="panel-foot" id="songs-foot">Meest gestreamd op Spotify in Nederland</div>
+    </section>
+    <section class="panel films" id="films">
+      <div class="backdrop"></div>
+      <div class="panel-head"><h2><i></i>Top 5 films</h2><span>Box office · TMDB</span></div>
+      <div class="list"><div class="empty">Laden</div></div>
+      <div class="panel-foot">Hoogste opbrengst · nu in de bioscoop</div>
+    </section>
+  </main>
+</div>
+
+<div id="status"><div class="spinner"></div><div>Hitlijsten laden</div></div>
+
+<script>
+/* ================= Instellingen ================= */
+const COUNTRY    = 'nl';
+const COUNT      = 5;
+const SPOTIFY_CHART = 'daily';         // 'daily' = Spotify-hitlijst van vandaag, 'weekly' = van deze week
+const SONGS_URL  = `https://kworb.net/spotify/country/${COUNTRY}_${SPOTIFY_CHART}.html`;
+
+// TMDB-sleutel voor de bioscoopfilms (gratis, zie uitleg). Mag de "API Key" of het "API Read Access Token" zijn.
+// Je kunt hem ook in de link meegeven: hitlijsten.html?tmdb=JOUWSLEUTEL
+const FILM_REGION = 'US';
+const FILM_MAX_DAYS = 90;            // alleen films die in de afgelopen 90 dagen uitkwamen (geen heruitgaven zoals Endgame)             // welke bioscopen: 'US' (grootste markt), 'NL', 'GB', ...
+const TMDB_KEY   = 'dd4127a72eb02e8b19384eafee676ea5';
+const REFRESH_MS = 30 * 60 * 1000;   // elke 30 minuten verversen
+
+const SOURCES = [
+  u => u,
+  u => `https://verkeer-proxy.thomas-schorn-zwolle.workers.dev/?url=${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
+];
+/* ================================================ */
+
+const DEBUG = /[?&]debug/.test(location.search);
+const SRC_NAMES = ['direct', 'eigen proxy', 'allorigins', 'corsproxy'];
+let dbgBox = null;
+function log(...parts) {
+  console.log('[Hitlijsten]', ...parts);
+  if (!DEBUG) return;
+  if (!dbgBox) { dbgBox = document.createElement('div'); dbgBox.id = 'dbg'; document.body.appendChild(dbgBox); }
+  const line = document.createElement('div');
+  line.textContent = new Date().toLocaleTimeString('nl-NL') + '  ' + parts.join(' ');
+  dbgBox.appendChild(line);
+  while (dbgBox.children.length > 40) dbgBox.firstChild.remove();
+}
+
+/* ---------- Klok ---------- */
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('date').textContent = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+tick(); setInterval(tick, 1000);
+document.getElementById('songs-foot').textContent = 'Spotify-hitlijst van ' + (SPOTIFY_CHART === 'weekly' ? 'deze week' : 'gisteren') + ' · totaal aantal streams';
+
+/* ---------- Ophalen ---------- */
+async function fetchText(url, timeout = 8000, init = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const r = await fetch(url, { ...init, signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+// Alle routes tegelijk proberen; de eerste met geldige data wint.
+const errors = [];
+async function fetchJson(key, url, parse = JSON.parse, init) {
+  return new Promise((resolve, reject) => {
+    let left = SOURCES.length, done = false;
+    SOURCES.forEach((make, i) => {
+      fetchText(make(url), 10000, init)
+        .then(txt => {
+          const data = parse(txt);
+          if (done) return;
+          done = true;
+          log(key, 'geladen via', SRC_NAMES[i]);
+          resolve(data);
+        })
+        .catch(e => {
+          const why = e && (e.name === 'AbortError' ? 'timeout' : e.name === 'SyntaxError' ? 'geen geldige data' : (e.message || 'fout'));
+          errors.push(`${key} via ${SRC_NAMES[i]}: ${why}`);
+          log(key, 'mislukt via', SRC_NAMES[i], '→', why);
+        })
+        .finally(() => { if (--left === 0 && !done) reject(new Error(key + ' niet bereikbaar')); });
+    });
+  });
+}
+
+/* ---------- Spotify-hitlijst (via kworb.net, dat de Spotify Charts overneemt) ---------- */
+// 4873450 -> "4,87 mln", 912345 -> "912.345"
+function compact(n) {
+  if (!n) return '';
+  if (n >= 1e9) return (n / 1e9).toLocaleString('nl-NL', { maximumFractionDigits: 2 }) + ' mld';
+  if (n >= 1e6) return (n / 1e6).toLocaleString('nl-NL', { maximumFractionDigits: n >= 1e8 ? 0 : n >= 1e7 ? 1 : 2 }) + ' mln';
+  return n.toLocaleString('nl-NL');
+}
+
+function parseKworb(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const rows = [];
+  // Kolom "Streams" opzoeken in de kop van de tabel
+  const heads = [...doc.querySelectorAll('table th')].map(th => th.textContent.replace(/\s+/g, ' ').trim());
+  const streamCol = heads.findIndex(h => h === 'Total');   // totaal aantal streams in Nederland
+  const moveCol = heads.findIndex(h => h === 'P+');        // verandering t.o.v. de vorige dag
+  for (const tr of doc.querySelectorAll('table tr')) {
+    const link = tr.querySelector('a[href*="track/"]');
+    if (!link) continue;
+    const cell = link.closest('td');
+    const id = (link.getAttribute('href').match(/track\/([A-Za-z0-9]+)/) || [])[1];
+    const text = cell.textContent.replace(/\s+/g, ' ').trim();
+    const artist = text.split(' - ')[0].trim();
+    const feat = (text.match(/\(w\/ ([^)]+)\)/) || [])[1];
+    const cells = tr.querySelectorAll('td');
+    const streams = streamCol >= 0 && cells[streamCol] ? parseInt(cells[streamCol].textContent.replace(/[^0-9]/g, ''), 10) : 0;
+    const n = compact(streams);
+    const mv = moveCol >= 0 && cells[moveCol] ? cells[moveCol].textContent.trim().toUpperCase() : '';
+    const move = /^\+\d+/.test(mv) ? { type: 'up', n: parseInt(mv, 10) }
+               : /^-\d+/.test(mv)  ? { type: 'down', n: -parseInt(mv, 10) }
+               : mv === '=' || mv === '0' ? { type: 'same' }
+               : /NEW|RE/.test(mv) ? { type: 'new' } : null;
+    rows.push({ id, title: link.textContent.trim(), sub: feat ? `${artist} & ${feat}` : artist, move,
+                stat: n, statLabel: 'streams totaal', statShort: n ? n + ' streams' : '' });
+    if (rows.length >= COUNT) break;
+  }
+  if (!rows.length) throw new SyntaxError('geen hitlijst gevonden');
+  return rows;
+}
+
+// Hoesje bij Spotify zelf ophalen (oEmbed, geen sleutel nodig) en de 640px-versie gebruiken
+async function spotifyArt(id) {
+  if (!id) return '';
+  try {
+    const d = await fetchJson('hoes', `https://open.spotify.com/oembed?url=${encodeURIComponent('https://open.spotify.com/track/' + id)}`);
+    return (d.thumbnail_url || '').replace('ab67616d00001e02', 'ab67616d0000b273');
+  } catch (e) { return ''; }
+}
+
+async function getSongs() {
+  const rows = await fetchJson('songs', SONGS_URL, parseKworb);
+  await Promise.all(rows.map(async r => { r.art = await spotifyArt(r.id); }));
+  return rows;
+}
+
+/* ---------- Bioscoopfilms (TMDB: nu in de Nederlandse bioscoop) ---------- */
+const GENRES = { 28:'Actie', 12:'Avontuur', 16:'Animatie', 35:'Komedie', 80:'Misdaad', 99:'Documentaire', 18:'Drama', 10751:'Familie',
+  14:'Fantasy', 36:'Historisch', 27:'Horror', 10402:'Muziek', 9648:'Mysterie', 10749:'Romantiek', 878:'Sciencefiction',
+  10770:'Tv-film', 53:'Thriller', 10752:'Oorlog', 37:'Western' };
+
+// Bedragen kort en leesbaar: $ 1,2 mld / $ 412 mln
+function money(n) {
+  if (!n) return '';
+  const f = (v, d) => v.toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  if (n >= 1e9) return '$ ' + f(n / 1e9, 2) + ' mld';
+  if (n >= 1e6) return '$ ' + f(n / 1e6, n >= 1e8 ? 0 : 1) + ' mln';
+  return '$ ' + f(n, 0);
+}
+
+async function tmdb(path, key) {
+  const bearer = key.length > 40;   // lange sleutel = Read Access Token
+  const url = `https://api.themoviedb.org/3${path}${path.includes('?') ? '&' : '?'}` + (bearer ? '' : `api_key=${encodeURIComponent(key)}`);
+  const init = bearer ? { headers: { Authorization: 'Bearer ' + key, accept: 'application/json' } } : {};
+  return JSON.parse(await fetchText(url, 10000, init));   // TMDB staat direct ophalen toe
+}
+
+async function getFilms() {
+  const key = new URLSearchParams(location.search).get('tmdb') || TMDB_KEY;
+  if (!key) throw new Error('geen TMDB-sleutel');
+  let list;
+  try {
+    // Films die nu draaien (twee pagina's = ca. 40 films)
+    const pages = await Promise.all([1, 2].map(p =>
+      tmdb(`/movie/now_playing?language=nl-NL&region=${FILM_REGION}&page=${p}`, key)));
+    list = pages.flatMap(p => p.results || []);
+  } catch (e) {
+    errors.push('films via TMDB: ' + (e && e.message === '401' ? 'sleutel ongeldig' : (e && e.message) || 'fout'));
+    throw e;
+  }
+  // Uniek, met poster, en de 25 populairste nader bekijken voor de opbrengst
+  // TMDB telt ook heruitgaven als "nu in de bioscoop"; die vallen af doordat hun premièredatum oud is.
+  const cutoff = Date.now() - FILM_MAX_DAYS * 864e5;
+  const seen = new Set();
+  list = list.filter(m => m.poster_path && !seen.has(m.id) && seen.add(m.id)
+                       && m.release_date && new Date(m.release_date).getTime() >= cutoff)
+             .sort((a, b) => b.popularity - a.popularity).slice(0, 25);
+  const details = await Promise.all(list.map(m =>
+    tmdb(`/movie/${m.id}?language=nl-NL`, key).catch(() => null)));
+  const films = list.map((m, i) => ({ ...m, revenue: details[i]?.revenue || 0, genres: details[i]?.genres }));
+
+  // Sorteren op opbrengst; films zonder bekende opbrengst vullen eventueel aan op populariteit
+  const withMoney = films.filter(f => f.revenue > 0).sort((a, b) => b.revenue - a.revenue);
+  const rest = films.filter(f => !f.revenue);
+  return [...withMoney, ...rest].slice(0, COUNT).map(m => {
+    const genres = (m.genres ? m.genres.map(g => g.name) : (m.genre_ids || []).map(g => GENRES[g]))
+      .filter(Boolean).slice(0, 2).join(', ');
+    const date = m.release_date ? new Date(m.release_date) : null;
+    const short = date ? date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : '';
+    const long  = date ? date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const amount = money(m.revenue);
+    return { id: m.id, title: m.title,
+             sub: [short && 'release date ' + short, genres].filter(Boolean).join(' · '),
+             heroSub: [long && 'Release date ' + long, genres].filter(Boolean).join(' · '),
+             stat: amount, statLabel: 'opbrengst wereldwijd', statShort: amount,
+             art: `https://image.tmdb.org/t/p/w500${m.poster_path}` };
+  });
+}
+
+/* ---------- Opbouw ---------- */
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function bg(u) { return u ? `background-image:url("${u.replace(/"/g, '%22')}")` : ''; }
+
+function renderList(id, items, badge) {
+  const panel = document.getElementById(id);
+  const list = panel.querySelector('.list');
+  const key = items.map(i => i.title + (i.move ? i.move.type + (i.move.n || '') : '')).join('|');
+  if (list.dataset.key === key) return;
+  const first = !list.dataset.key;
+  list.dataset.key = key;
+  const [one, ...rest] = items;
+  list.innerHTML = `
+    <div class="hero${one.stat ? ' has-money' : ''}">
+      <div class="art" style='${bg(one.art)}'><div class="num"><small>#</small>1</div>${one.move ? `<div class="mv-hero">${moveHtml(one.move)}</div>` : ''}</div>
+      <div class="info">
+        <div class="badge">${badge}</div>
+        <div class="t">${esc(one.title)}</div>
+        <div class="s">${one.move ? `<span class="mv-inline">${moveHtml(one.move)}</span>` : ''}${esc(one.heroSub || one.sub)}</div>
+        ${one.stat ? `<div class="money">${esc(one.stat)}<small>${esc(one.statLabel)}</small></div>` : ''}
+      </div>
+    </div>
+    ${rest.map((it, i) => `
+      <div class="row">
+        <div class="pos"><div class="num">${i + 2}</div>${moveHtml(it.move)}</div>
+        <div class="art" style='${bg(it.art)}'></div>
+        <div class="info"><div class="t">${esc(it.title)}</div><div class="s">${it.move ? `<span class="mv-inline">${moveHtml(it.move)}</span>` : ''}${it.statShort ? `<b class="m">${esc(it.statShort)}</b>${it.sub ? ' · ' : ''}` : ''}${esc(it.sub)}</div></div>
+      </div>`).join('')}`;
+  panel.querySelector('.backdrop').setAttribute('style', bg(one.art));
+  if (!first) { list.classList.remove('swap'); void list.offsetWidth; list.classList.add('swap'); }
+}
+
+function preload(urls) {
+  return Promise.all(urls.filter(Boolean).map(u => new Promise(res => {
+    const img = new Image(); const t = setTimeout(res, 6000);
+    img.onload = img.onerror = () => { clearTimeout(t); res(); };
+    img.src = u;
+  })));
+}
+
+/* Films: vorige volgorde onthouden in de browser.
+   "Vorige" = de volgorde van vóór de laatste wijziging, zodat de pijltjes blijven staan
+   tot de lijst opnieuw verandert (en niet na 30 minuten allemaal op "=" springen). */
+const RANK_KEY = 'hitlijsten-films-v1';
+function filmMoves(items) {
+  let store = null;
+  try { store = JSON.parse(localStorage.getItem(RANK_KEY)); } catch (e) {}
+  const ids = items.map(i => String(i.id));
+  if (!store || !Array.isArray(store.current)) {
+    store = { current: ids, previous: null };            // eerste keer: nog niets om mee te vergelijken
+  } else if (store.current.join() !== ids.join()) {
+    store = { current: ids, previous: store.current };   // lijst is veranderd
+  }
+  try { localStorage.setItem(RANK_KEY, JSON.stringify(store)); } catch (e) {}
+  if (!store.previous) return;
+  items.forEach((it, i) => {
+    const before = store.previous.indexOf(String(it.id));
+    it.move = before < 0 ? { type: 'new' }
+            : before > i ? { type: 'up', n: before - i }
+            : before < i ? { type: 'down', n: i - before } : { type: 'same' };
+  });
+}
+
+function moveHtml(m) {
+  if (!m) return '';
+  if (m.type === 'up')   return `<span class="mv up" title="gestegen">▲ ${m.n}</span>`;
+  if (m.type === 'down') return `<span class="mv down" title="gedaald">▼ ${m.n}</span>`;
+  if (m.type === 'new')  return `<span class="mv new">Nieuw</span>`;
+  return `<span class="mv same" title="zelfde positie">●</span>`;
+}
+
+async function load() {
+  const [songs, films] = await Promise.allSettled([getSongs(), getFilms()]);
+  const s = songs.status === 'fulfilled' ? songs.value : null;
+  const f = films.status === 'fulfilled' ? films.value : null;
+  if (f && f.length) filmMoves(f);
+  await preload([...(s || []), ...(f || [])].map(i => i.art));
+  if (s && s.length) renderList('songs', s, 'Meest gestreamd');
+  else document.querySelector('#songs .list').innerHTML = '<div class="empty">Songs niet bereikbaar</div>';
+  if (f && f.length) renderList('films', f, 'Hoogste opbrengst');
+  else document.querySelector('#films .list').innerHTML = `<div class="empty">${films.reason && films.reason.message === 'geen TMDB-sleutel' ? 'Vul je TMDB-sleutel in' : 'Films niet bereikbaar'}</div>`;
+  if (s || f) document.getElementById('updated').textContent =
+    'Hitlijsten Nederland · bijgewerkt ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  if (!s && !f) throw new Error('niets bereikbaar');
+}
+
+async function start() {
+  try {
+    if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
+    await load();
+    document.getElementById('status').classList.add('hide');
+  } catch (e) {
+    log('fout', e && e.message);
+    document.querySelector('#status div:last-child').innerHTML =
+      'Hitlijsten niet bereikbaar — opnieuw proberen over 30 s' +
+      '<div style="margin-top:2vmin;font-size:1.4vmin;text-transform:none;letter-spacing:0;line-height:1.6;max-width:80vw;color:#9aa">' +
+      errors.slice(-8).map(esc).join('<br>') + '</div>';
+    errors.length = 0;
+    setTimeout(start, 30000);
+  }
+}
+
+// Yodeck HTML-app: niets speciaals nodig, de pagina staat stil
+window.init_widget = window.start_widget = window.stop_widget = () => {};
+
+setInterval(() => load().catch(() => {}), REFRESH_MS);
+start();
+</script>
+</body>
+</html>
